@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gerador de Posts · Threads</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;1,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0D0D0D;
+    --bg-card: #131313;
+    --bg-card-hover: #181818;
+    --text: #F0EEE8;
+    --text-soft: #8A8A85;
+    --text-dim: #555550;
+    --border: #232320;
+    --accent: #F0EEE8;
+    --font-title: 'PT Serif', Georgia, serif;
+    --font-body: 'Inter', Arial, sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    line-height: 1.6;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 56px 24px 100px; }
+
+  /* Header */
+  header { margin-bottom: 48px; }
+  .eyebrow {
+    font-size: 11px; letter-spacing: .2em; text-transform: uppercase;
+    color: var(--text-dim); margin-bottom: 14px;
+  }
+  h1 {
+    font-family: var(--font-title); font-weight: 400;
+    font-size: clamp(28px, 5vw, 38px); line-height: 1.15;
+    color: var(--text); margin-bottom: 12px;
+  }
+  h1 em { font-style: italic; }
+  .subtitle { font-size: 14px; color: var(--text-soft); max-width: 480px; }
+
+  /* Form */
+  .form-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    padding: 28px 24px;
+    margin-bottom: 32px;
+  }
+  label {
+    display: block; font-size: 12px; font-weight: 500;
+    letter-spacing: .04em; color: var(--text-soft);
+    margin-bottom: 8px; text-transform: uppercase;
+  }
+  textarea, select {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 15px;
+    padding: 14px 16px;
+    resize: vertical;
+    transition: border-color .2s ease;
+  }
+  textarea:focus, select:focus {
+    outline: none; border-color: var(--text-dim);
+  }
+  textarea { min-height: 90px; margin-bottom: 20px; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+  select { cursor: pointer; appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%238A8A85' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 16px center;
+  }
+
+  button.generate {
+    width: 100%;
+    background: var(--text);
+    color: var(--bg);
+    border: none;
+    font-family: var(--font-body);
+    font-size: 13px; font-weight: 600;
+    letter-spacing: .08em; text-transform: uppercase;
+    padding: 16px;
+    cursor: pointer;
+    transition: opacity .2s ease, transform .15s ease;
+  }
+  button.generate:hover { opacity: .85; }
+  button.generate:active { transform: scale(0.99); }
+  button.generate:disabled { opacity: .4; cursor: default; }
+
+  /* Loading */
+  .loading-row {
+    display: none;
+    align-items: center; gap: 10px;
+    margin-top: 16px; font-size: 13px; color: var(--text-soft);
+  }
+  .loading-row.active { display: flex; }
+  .dot-pulse {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--text-soft);
+    animation: pulse 1s infinite ease-in-out;
+  }
+  @keyframes pulse { 0%,100% { opacity: .3; } 50% { opacity: 1; } }
+
+  /* Results */
+  .results { display: flex; flex-direction: column; gap: 14px; }
+  .post-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    padding: 22px 22px 16px;
+    opacity: 0; transform: translateY(8px);
+    animation: fadeIn .5s ease forwards;
+  }
+  .post-card:nth-child(1) { animation-delay: .05s; }
+  .post-card:nth-child(2) { animation-delay: .15s; }
+  .post-card:nth-child(3) { animation-delay: .25s; }
+  .post-card:nth-child(4) { animation-delay: .35s; }
+  .post-card:nth-child(5) { animation-delay: .45s; }
+  @keyframes fadeIn { to { opacity: 1; transform: translateY(0); } }
+
+  .post-meta {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 12px;
+  }
+  .post-tag {
+    font-size: 10px; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--text-dim);
+  }
+  .post-num { font-family: var(--font-title); font-size: 13px; color: var(--text-dim); }
+
+  .post-text {
+    font-family: var(--font-title); font-style: italic;
+    font-size: 16px; line-height: 1.6; color: var(--text);
+    white-space: pre-line; margin-bottom: 14px;
+  }
+
+  .post-footer {
+    display: flex; justify-content: space-between; align-items: center;
+    padding-top: 12px; border-top: 1px solid var(--border);
+  }
+  .char-count { font-size: 11px; color: var(--text-dim); }
+  .copy-btn {
+    background: none; border: 1px solid var(--border);
+    color: var(--text-soft); font-family: var(--font-body);
+    font-size: 11px; letter-spacing: .04em; text-transform: uppercase;
+    padding: 7px 14px; cursor: pointer;
+    transition: all .2s ease;
+  }
+  .copy-btn:hover { border-color: var(--text-dim); color: var(--text); }
+  .copy-btn.copied { color: var(--text); border-color: var(--text); }
+
+  .empty-state {
+    text-align: center; padding: 60px 20px;
+    color: var(--text-dim); font-size: 13px;
+  }
+
+  .error-box {
+    background: #1A0E0E; border: 1px solid #3A1A1A;
+    color: #D88; padding: 14px 18px; font-size: 13px;
+    margin-bottom: 20px; display: none;
+  }
+  .error-box.active { display: block; }
+
+  footer {
+    margin-top: 56px; padding-top: 24px;
+    border-top: 1px solid var(--border);
+    font-size: 11px; color: var(--text-dim);
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="eyebrow">Murilo Conceição · Marketing Médico</div>
+      <h1>Gerador de posts<br>para o <em>Threads</em></h1>
+      <p class="subtitle">Descreva o tema ou cole o contexto de uma conversa. O agente gera posts calibrados com seu sistema, sua linguagem e seu CTA — prontos para colar e publicar.</p>
+    </header>
+
+    <div class="form-card">
+      <label for="contexto">Tema ou contexto</label>
+      <textarea id="contexto" placeholder="Ex: nefrologista pediátrica que depende de indicação lenta e não quer fazer dancinha no TikTok. Ou cole o resumo de uma conversa, um print, uma dor específica de um médico..."></textarea>
+
+      <div class="row">
+        <div>
+          <label for="angulo">Ângulo</label>
+          <select id="angulo">
+            <option value="ruptura de crença">Ruptura de crença</option>
+            <option value="storytelling pessoal">Storytelling pessoal</option>
+            <option value="dado e prova">Dado e prova</option>
+            <option value="pergunta provocativa">Pergunta provocativa</option>
+            <option value="diagnóstico direto">Diagnóstico direto</option>
+          </select>
+        </div>
+        <div>
+          <label for="quantidade">Quantidade</label>
+          <select id="quantidade">
+            <option value="3">3 posts</option>
+            <option value="5" selected>5 posts</option>
+            <option value="8">8 posts</option>
+          </select>
+        </div>
+      </div>
+
+      <button class="generate" id="generateBtn">Gerar posts</button>
+      <div class="loading-row" id="loadingRow">
+        <div class="dot-pulse"></div>
+        <span id="loadingText">Escrevendo no seu tom de voz...</span>
+      </div>
+    </div>
+
+    <div class="error-box" id="errorBox"></div>
+
+    <div class="results" id="results">
+      <div class="empty-state" id="emptyState">Seus posts aparecem aqui.</div>
+    </div>
+
+    <footer>Calibrado com o sistema: tráfego pago · audiovisual · alinhamento comercial</footer>
+  </div>
+
+<script>
+const SYSTEM_PROMPT = `Você é o redator de conteúdo de Murilo Conceição, especialista em marketing médico que vende uma assessoria completa (tráfego pago + audiovisual + alinhamento comercial) para médicos, cirurgiões, dentistas e donos de clínica que querem parar de depender de indicação e lotar a agenda com pacientes particulares.
+
+REGRAS DE VOZ — siga rigorosamente:
+- Tom direto, sem clichê, sem eufemismo, sem emojis em excesso (no máximo 1 por post, geralmente nenhum)
+- Frases curtas. Parágrafos curtos. Muito espaço em branco.
+- Fala como quem diagnostica um problema, não como quem vende algo
+- Nunca usa "revolucionar", "transformar sua vida", "sucesso", "incrível"
+- Estrutura típica: nomeia uma dor específica e reconhecível → desmonta uma crença errada → mostra o mecanismo real → fecha com gancho ou pergunta (não precisa de CTA em todo post)
+- Quando usar CTA, é sempre variação de: "Me manda SISTEMA no direct" — mas use com moderação, nem todo post precisa vender
+- Formato Threads: posts curtos, entre 200-500 caracteres idealmente, podem ter quebras de linha para ritmo
+- Público: médicos, cirurgiões, dentistas, donos de clínica — fala COM eles, não SOBRE eles
+- Evite genérico. Seja específico: cite situações reais (agenda vazia, paciente que some, indicação que não chega, tráfego pago sem retorno, convênio como teto)
+
+Gere posts que pareçam escritos por uma pessoa real refletindo sobre o mercado, não por uma empresa anunciando serviço.`;
+
+function buildUserPrompt(contexto, angulo, quantidade) {
+  return `Contexto/tema: "${contexto}"
+
+Ângulo pedido: ${angulo}
+Quantidade: ${quantidade} posts diferentes, cada um uma variação/abordagem distinta do mesmo tema.
+
+Responda APENAS em JSON válido, sem markdown, sem texto antes ou depois, no formato:
+{"posts": ["texto do post 1", "texto do post 2", ...]}
+
+Cada post deve ser independente e completo, pronto para colar direto no Threads.`;
+}
+
+const generateBtn = document.getElementById('generateBtn');
+const loadingRow = document.getElementById('loadingRow');
+const loadingText = document.getElementById('loadingText');
+const results = document.getElementById('results');
+const emptyState = document.getElementById('emptyState');
+const errorBox = document.getElementById('errorBox');
+
+const loadingMessages = [
+  "Escrevendo no seu tom de voz...",
+  "Calibrando o gancho...",
+  "Ajustando ritmo das frases...",
+  "Quase lá..."
+];
+let loadingInterval;
+
+function startLoading() {
+  loadingRow.classList.add('active');
+  generateBtn.disabled = true;
+  generateBtn.textContent = 'Gerando...';
+  let i = 0;
+  loadingInterval = setInterval(() => {
+    i = (i + 1) % loadingMessages.length;
+    loadingText.textContent = loadingMessages[i];
+  }, 1800);
+}
+
+function stopLoading() {
+  loadingRow.classList.remove('active');
+  generateBtn.disabled = false;
+  generateBtn.textContent = 'Gerar posts';
+  clearInterval(loadingInterval);
+}
+
+function showError(msg) {
+  errorBox.textContent = msg;
+  errorBox.classList.add('active');
+}
+
+function hideError() {
+  errorBox.classList.remove('active');
+}
+
+function renderPosts(posts) {
+  results.innerHTML = '';
+  if (!posts || posts.length === 0) {
+    results.innerHTML = '<div class="empty-state">Nenhum post gerado. Tenta de novo.</div>';
+    return;
+  }
+  posts.forEach((text, idx) => {
+    const card = document.createElement('div');
+    card.className = 'post-card';
+    card.innerHTML = `
+      <div class="post-meta">
+        <span class="post-tag">Post para Threads</span>
+        <span class="post-num">${String(idx + 1).padStart(2, '0')}</span>
+      </div>
+      <div class="post-text">${escapeHtml(text)}</div>
+      <div class="post-footer">
+        <span class="char-count">${text.length} caracteres</span>
+        <button class="copy-btn" data-text="${encodeURIComponent(text)}">Copiar</button>
+      </div>
+    `;
+    results.appendChild(card);
+  });
+
+  document.querySelectorAll('.copy-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const text = decodeURIComponent(btn.getAttribute('data-text'));
+      navigator.clipboard.writeText(text).then(() => {
+        btn.textContent = 'Copiado';
+        btn.classList.add('copied');
+        setTimeout(() => {
+          btn.textContent = 'Copiar';
+          btn.classList.remove('copied');
+        }, 1800);
+      });
+    });
+  });
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+async function generatePosts() {
+  const contexto = document.getElementById('contexto').value.trim();
+  const angulo = document.getElementById('angulo').value;
+  const quantidade = document.getElementById('quantidade').value;
+
+  if (!contexto) {
+    showError('Descreve o tema ou cola o contexto antes de gerar.');
+    return;
+  }
+  hideError();
+  startLoading();
+
+  try {
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-6",
+        max_tokens: 2000,
+        system: SYSTEM_PROMPT,
+        messages: [
+          { role: "user", content: buildUserPrompt(contexto, angulo, quantidade) }
+        ]
+      })
+    });
+
+    const data = await response.json();
+    const textBlock = data.content.find(b => b.type === 'text');
+    if (!textBlock) throw new Error('Resposta vazia da IA.');
+
+    let cleaned = textBlock.text.trim().replace(/```json|```/g, '').trim();
+    const parsed = JSON.parse(cleaned);
+
+    renderPosts(parsed.posts);
+  } catch (err) {
+    console.error(err);
+    showError('Algo deu errado ao gerar os posts. Tenta novamente.');
+    results.innerHTML = '<div class="empty-state" id="emptyState">Seus posts aparecem aqui.</div>';
+  } finally {
+    stopLoading();
+  }
+}
+
+generateBtn.addEventListener('click', generatePosts);
+
+document.getElementById('contexto').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && e.metaKey) generatePosts();
+});
+</script>
+</body>
+</html>
